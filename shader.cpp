@@ -77,7 +77,6 @@ void init_light(int light_source, float Lx, float Ly, float Lz,
 	float light_position[] = { Lx, Ly, Lz, 0.0 };
 	float light_color[] = { Lr, Lg, Lb, 1.0 };
 
-	// Initialize light source
 	glEnable(GL_LIGHTING);
 	glEnable(light_source);
 	glLightfv(light_source, GL_POSITION, light_position);
