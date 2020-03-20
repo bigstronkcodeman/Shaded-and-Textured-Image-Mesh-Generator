@@ -3,7 +3,6 @@
 #else
 #include <GL/glut.h>
 #endif
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,52 +10,38 @@
 #include <iostream>
 using namespace std;
 
-#define MIN_X_VIEW -50
-#define MAX_X_VIEW 50
-#define MIN_Y_VIEW -50
-#define MAX_Y_VIEW 50
-#define MIN_Z_VIEW -50
-#define MAX_Z_VIEW 50
 #define MIN_X_SCREEN -500
 #define MAX_X_SCREEN 500
 #define MIN_Y_SCREEN -500
 #define MAX_Y_SCREEN 500
 #define MIN_Z_SCREEN -500
 #define MAX_Z_SCREEN 500
-
 #define PIXEL_ROWS 500
 #define PIXEL_COLS 500
 
 float scale_amt = 1.75;
-float rotate_inc = 3;
-
+float rotate_inc = 2.5;
 int xangle = 0;
 int yangle = 0;
 int zangle = 270;
-
 float surface[PIXEL_ROWS][PIXEL_COLS];
-
 float surface_nx[PIXEL_ROWS][PIXEL_COLS * 2];
 float surface_ny[PIXEL_ROWS][PIXEL_COLS * 2];
 float surface_nz[PIXEL_ROWS][PIXEL_COLS * 2];
-
 float nx[PIXEL_ROWS][PIXEL_COLS];
 float ny[PIXEL_ROWS][PIXEL_COLS];
 float nz[PIXEL_ROWS][PIXEL_COLS];
-
 float r[PIXEL_ROWS][PIXEL_COLS];
 float g[PIXEL_ROWS][PIXEL_COLS];
 float b[PIXEL_ROWS][PIXEL_COLS];
-
 bool drawMesh = false;
 bool drawPic = true;
 bool drawNormals = false;
 bool lighting = true;
-
 float Ka = 0.1;
-float Kd = 0.4;
-float Ks = 0.5;
-float Kp = 0.8;
+float Kd = 0.5;
+float Ks = 0.6;
+float Kp = 0.5;
 
 void init_material(float Ka, float Kd, float Ks, float Kp,
 	float Mr, float Mg, float Mb)
@@ -103,10 +88,6 @@ void surface_normal(float ax, float ay, float az,
 	float vy = cy - ay;
 	float vz = cz - az;
 
-	float centroid_x = (ax + bx + cx) / 3.0;
-	float centroid_y = (ay + by + cy) / 3.0;
-	float centroid_z = (az + bz + cz) / 3.0;
-
 	nx = uy * vz - uz * vy;
 	ny = uz * vx - ux * vz;
 	nz = ux * vy - uy * vx;
@@ -116,7 +97,8 @@ void surface_normal(float ax, float ay, float az,
 	ny /= mag;
 	nz /= mag;
 
-	nz < 0 ? nz *= -1 : nz;
+	//nz < 0 ? nz *= -1 : nz;
+	nz *= -1;
  }
 
 void initMesh() 
@@ -132,7 +114,6 @@ void initMesh()
 			surface[u][v] *= 0.1;
 		}
 	}
-
 	din_depth.close();
 
 	int i = 0;
@@ -189,7 +170,6 @@ void initMesh()
 
 			}
 		}
-
 		i += 1;
 	}
 
@@ -198,14 +178,10 @@ void initMesh()
 	{
 		for (int v = 0; v < PIXEL_COLS; v++)
 		{
-			din_rgb >> r[u][v]
-				>> g[u][v]
-				>> b[u][v];
+			din_rgb >> r[u][v] >> g[u][v] >> b[u][v];
 		}
 	}
-
 	din_rgb.close();
-
 }
 
 void draw_normals()
@@ -254,7 +230,6 @@ void draw_mesh()
 	for (int u = 0; u <= PIXEL_ROWS - inc; u += inc)
 	{
 		u > 0 ? u-- : u;
-
 		for (int v = 0; v <= PIXEL_COLS - inc; v += inc)
 		{
 			v > 0 ? v-- : v;
@@ -279,7 +254,6 @@ void draw_mesh()
 
 			v > 0 ? v++ : v;
 		}
-
 		u > 0 ? u++ : u;
 	}
 
@@ -323,14 +297,12 @@ void display()
 		}
 		draw_pic();
 	}
-
 	if (drawMesh)
 	{
 		glDisable(GL_LIGHTING);
 		draw_mesh();
 		glEnable(GL_LIGHTING);
 	}
-
 	if (drawNormals)
 	{
 		glDisable(GL_LIGHTING);
@@ -369,7 +341,6 @@ void keyboard(unsigned char key, int x, int y)
 		scale_amt += 0.01;
 	else if (key == '-') 
 		scale_amt -= 0.01;
-
 	glutPostRedisplay();
 }
 
@@ -382,10 +353,7 @@ void init()
 	glEnable(GL_DEPTH_TEST);
 
 	glShadeModel(GL_SMOOTH);
-	init_light(GL_LIGHT0, 500, 500, 250, 1, 1, 1);
-	init_light(GL_LIGHT1, 0, 0, 250, 1, 1, 1);
-	//init_light(GL_LIGHT1, -250, 250, 125, 1, 1, 1);
-	//init_light(GL_LIGHT2, 250, -250, 125, 1, 1, 1);
+	init_light(GL_LIGHT1, 0, 0, 300, 1, 1, 1);
 
 	initMesh();
 }
