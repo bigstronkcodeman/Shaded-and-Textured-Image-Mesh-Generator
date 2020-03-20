@@ -20,7 +20,7 @@ using namespace std;
 #define PIXEL_COLS 500
 
 float scale_amt = 1.75;
-float rotate_inc = 2.5;
+float rotate_inc = 2;
 int xangle = 0;
 int yangle = 0;
 int zangle = 270;
@@ -105,16 +105,19 @@ void initMesh()
 {
 	ifstream din_depth, din_rgb;
 	din_depth.open("penny-depth.txt");
-
+	din_rgb.open("penny-image.txt");
 	for (int u = 0; u < PIXEL_ROWS; u++)
 	{
 		for (int v = 0; v < PIXEL_COLS; v++)
 		{
 			din_depth >> surface[u][v];
 			surface[u][v] *= 0.1;
+
+			din_rgb >> r[u][v] >> g[u][v] >> b[u][v];
 		}
 	}
 	din_depth.close();
+	din_rgb.close();
 
 	int i = 0;
 	for (int u = 0; u < PIXEL_ROWS - 1; u++)
@@ -172,16 +175,6 @@ void initMesh()
 		}
 		i += 1;
 	}
-
-	din_rgb.open("penny-image.txt");
-	for (int u = 0; u < PIXEL_ROWS; u++)
-	{
-		for (int v = 0; v < PIXEL_COLS; v++)
-		{
-			din_rgb >> r[u][v] >> g[u][v] >> b[u][v];
-		}
-	}
-	din_rgb.close();
 }
 
 void draw_normals()
@@ -354,7 +347,6 @@ void init()
 
 	glShadeModel(GL_SMOOTH);
 	init_light(GL_LIGHT1, 0, 0, 300, 1, 1, 1);
-
 	initMesh();
 }
 
