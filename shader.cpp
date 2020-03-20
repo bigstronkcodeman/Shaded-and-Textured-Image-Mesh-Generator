@@ -90,19 +90,6 @@ void init_light(int light_source, float Lx, float Ly, float Lz,
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 }
 
-void printSurfaceNormals()
-{
-	for (int i = 0; i < PIXEL_ROWS; ++i)
-	{
-		for (int j = 0; j < PIXEL_COLS; ++j)
-		{
-			cout << "surface_normal[" << i << "][" << j << "]: ("
-				<< surface_nx[i][j] << "," << surface_ny[i][j] << ","
-				<< surface_nz[i][j] << ")\n";
-		}
-	}
-}
-
 void surface_normal(float ax, float ay, float az,
 	float bx, float by, float bz,
 	float cx, float cy, float cz,
