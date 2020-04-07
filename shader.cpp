@@ -4,8 +4,6 @@
 #include <GL/glut.h>
 #endif
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <fstream>
 #include <iostream>
 using namespace std;
@@ -36,13 +34,13 @@ float g[PIXEL_ROWS][PIXEL_COLS];
 float b[PIXEL_ROWS][PIXEL_COLS];
 bool drawMesh = false;
 bool drawPic = true;
-bool drawNormals = false;
 bool lighting = true;
 float Ka = 0.1;
 float Kd = 0.5;
 float Ks = 0.6;
 float Kp = 0.5;
 
+// initialize material properties
 void init_material(float Ka, float Kd, float Ks, float Kp,
 	float Mr, float Mg, float Mb)
 {
@@ -56,6 +54,7 @@ void init_material(float Ka, float Kd, float Ks, float Kp,
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, Kp);
 }
 
+// initialize light properties
 void init_light(int light_source, float Lx, float Ly, float Lz,
 	float Lr, float Lg, float Lb)
 {
@@ -75,11 +74,13 @@ void init_light(int light_source, float Lx, float Ly, float Lz,
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 }
 
+// calculate triangle surface normal
 void surface_normal(float ax, float ay, float az,
 	float bx, float by, float bz,
 	float cx, float cy, float cz,
 	float& nx, float& ny, float& nz)
 {
+	// get two tangents u and v
 	float ux = bx - ax;
 	float uy = by - ay;
 	float uz = bz - az;
@@ -88,42 +89,44 @@ void surface_normal(float ax, float ay, float az,
 	float vy = cy - ay;
 	float vz = cz - az;
 
+	// calculate u cross v
 	nx = uy * vz - uz * vy;
 	ny = uz * vx - ux * vz;
 	nz = ux * vy - uy * vx;
 
+	// normalize
 	float mag = sqrt(nx * nx + ny * ny + nz * nz);
 	nx /= mag;
 	ny /= mag;
 	nz /= mag;
-
-	//nz < 0 ? nz *= -1 : nz;
 	nz *= -1;
  }
 
-void initMesh() 
+// initialize mesh properties
+void init_mesh() 
 {
+	// read in depth and rgb values
 	ifstream din_depth, din_rgb;
 	din_depth.open("penny-depth.txt");
 	din_rgb.open("penny-image.txt");
-	for (int u = 0; u < PIXEL_ROWS; u++)
+	for (int u = 0; u < PIXEL_ROWS; ++u)
 	{
-		for (int v = 0; v < PIXEL_COLS; v++)
+		for (int v = 0; v < PIXEL_COLS; ++v)
 		{
 			din_depth >> surface[u][v];
 			surface[u][v] *= 0.1;
-
 			din_rgb >> r[u][v] >> g[u][v] >> b[u][v];
 		}
 	}
 	din_depth.close();
 	din_rgb.close();
 
+	// calculate mesh surface normals
 	int i = 0;
-	for (int u = 0; u < PIXEL_ROWS - 1; u++)
+	for (int u = 0; u < PIXEL_ROWS - 1; ++u)
 	{
 		int j = 0;
-		for (int v = 0; v < PIXEL_COLS - 1; v++)
+		for (int v = 0; v < PIXEL_COLS - 1; ++v)
 		{
 			surface_normal(((MIN_X_SCREEN / 2.0) + u + 1) * scale_amt, ((MIN_X_SCREEN / 2.0) + v + 1) * scale_amt, surface[u + 1][v + 1] * scale_amt,
 				((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_X_SCREEN / 2.0) + v) * scale_amt, surface[u][v] * scale_amt,
@@ -141,6 +144,7 @@ void initMesh()
 		++i;
 	}
 
+	// calculate mesh vertex normals
 	i = 0;
 	for (int u = 0; u < PIXEL_ROWS; ++u)
 	{
@@ -149,12 +153,16 @@ void initMesh()
 		{
 			if (u == 0 || u == PIXEL_ROWS - 1|| v == 0 || v == PIXEL_COLS - 1)
 			{
+				// outermost polygons are flat and facing the positive 
+				// z-direction --> surface normal = (0,0,1)
 				nx[u][v] = 0;
 				ny[u][v] = 0;
 				nz[u][v] = 1;
 			}
 			else
 			{
+				// calculate vertex normal as normalized sum of all surface normals
+				// from polygons which contain this vertex
 				nx[u][v] = surface_nx[i][j] + surface_nx[i][j + 1] + surface_nx[i][j + 2]
 					+ surface_nx[i + 1][j + 1] + surface_nx[i + 1][j + 2] + surface_nx[i + 1][j + 3];
 				ny[u][v] = surface_ny[i][j] + surface_ny[i][j + 1] + surface_ny[i][j + 2]
@@ -170,39 +178,22 @@ void initMesh()
 				nx[u][v] /= magnitude;
 				ny[u][v] /= magnitude;
 				nz[u][v] /= magnitude;
-
 			}
 		}
 		i += 1;
 	}
 }
 
-void draw_normals()
-{
-	glColor3f(1, 0, 0);
-	float extra_scale = 20;
-	float inc = 5;
-	for (int u = 0; u < PIXEL_ROWS; u += inc)
-	{
-		for (int v = 0; v < PIXEL_COLS; v += inc)
-		{
-			glBegin(GL_LINES);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, surface[u][v] * scale_amt);
-			glVertex3f((((MIN_X_SCREEN / 2.0) + u + nx[u][v]) * scale_amt) + nx[u][v] * extra_scale, (((MIN_Y_SCREEN / 2.0) + v + ny[u][v]) * scale_amt) + ny[u][v] * extra_scale, (surface[u][v] * scale_amt) + nz[u][v] * extra_scale);
-			glEnd();
-		}
-	}
-}
-
+// draw colored polygon
 void draw_pic() 
 {
-	for (int u = 0; u < PIXEL_ROWS - 1; u++)
+	for (int u = 0; u < PIXEL_ROWS - 1; ++u)
 	{
-		for (int v = 0; v < PIXEL_COLS - 1; v++)
+		for (int v = 0; v < PIXEL_COLS - 1; ++v)
 		{
 			glBegin(GL_POLYGON);
-			glColor3f(r[u][v] / 255.0, b[u][v] / 255.0, g[u][v] / 255.0);
 			init_material(Ka, Kd, Ks, 100 * Kp, r[u][v] / 255.0, b[u][v] / 255.0, g[u][v] / 255.0);
+			glColor3f(r[u][v] / 255.0, b[u][v] / 255.0, g[u][v] / 255.0);
 			glNormal3f(nx[u][v], ny[u][v], nz[u][v]);
 			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, surface[u][v] * scale_amt);
 			glNormal3f(nx[u + 1][v], ny[u + 1][v], nz[u + 1][v]);
@@ -216,59 +207,26 @@ void draw_pic()
 	}
 }
 
+// draw mesh wireframe
 void draw_mesh() 
 {
 	glColor3f(0, 0.5, 1);
 	int inc = 5;
-	for (int u = 0; u <= PIXEL_ROWS - inc; u += inc)
+	for (int u = 0; u < PIXEL_ROWS - inc; u += inc)
 	{
-		u > 0 ? u-- : u;
-		for (int v = 0; v <= PIXEL_COLS - inc; v += inc)
+		for (int v = 0; v < PIXEL_COLS - inc; v += inc)
 		{
-			v > 0 ? v-- : v;
-
-			glBegin(GL_LINES);
-			glColor3f(0, 0.5, 1);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, (surface[u][v] + 3) * scale_amt);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v + inc) * scale_amt, (surface[u][v + inc] + 3) * scale_amt);
+			glBegin(GL_LINE_LOOP);
+			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, (surface[u][v] * scale_amt) + 3);
+			glVertex3f(((MIN_X_SCREEN / 2.0) + u + inc) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, (surface[u + inc][v] * scale_amt) + 3);
+			glVertex3f(((MIN_X_SCREEN / 2.0) + u + inc) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v + inc) * scale_amt, (surface[u + inc][v + inc] * scale_amt) + 3);
+			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v + inc) * scale_amt, (surface[u][v + inc] * scale_amt) + 3);
 			glEnd();
-
-			glBegin(GL_LINES);
-			glColor3f(0, 0.5, 1);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + v) * scale_amt, ((MIN_Y_SCREEN / 2.0) + u) * scale_amt, (surface[v][u] + 3) * scale_amt);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + v + inc) * scale_amt, ((MIN_Y_SCREEN / 2.0) + u) * scale_amt, (surface[v][u + inc] + 3) * scale_amt);
-			glEnd();
-
-			glBegin(GL_LINES);
-			glColor3f(0, 0.5, 1);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, (surface[u][v] + 3) * scale_amt);
-			glVertex3f(((MIN_X_SCREEN / 2.0) + u + inc) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v + inc) * scale_amt, (surface[u + inc][v + inc] + 3) * scale_amt);
-			glEnd();
-
-			v > 0 ? v++ : v;
 		}
-		u > 0 ? u++ : u;
-	}
-
-	int u = PIXEL_ROWS - 1;
-	for (int v = 0; v <= PIXEL_COLS - inc; v += inc)
-	{
-		v > 0 ? v-- : v;
-
-		glBegin(GL_LINES);
-		glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v) * scale_amt, (surface[u][v] + 3) * scale_amt);
-		glVertex3f(((MIN_X_SCREEN / 2.0) + u) * scale_amt, ((MIN_Y_SCREEN / 2.0) + v + inc) * scale_amt, (surface[u][v + inc] + 3) * scale_amt);
-		glEnd();
-
-		glBegin(GL_LINES);
-		glVertex3f(((MIN_X_SCREEN / 2.0) + v) * scale_amt, ((MIN_Y_SCREEN / 2.0) + u) * scale_amt, (surface[v][u] + 3) * scale_amt);
-		glVertex3f(((MIN_X_SCREEN / 2.0) + v + inc) * scale_amt, ((MIN_Y_SCREEN / 2.0) + u) * scale_amt, (surface[v + inc][u] + 3) * scale_amt);
-		glEnd();
-
-		v > 0 ? v++ : v;
 	}
 }
 
+// render to screen
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -296,16 +254,11 @@ void display()
 		draw_mesh();
 		glEnable(GL_LIGHTING);
 	}
-	if (drawNormals)
-	{
-		glDisable(GL_LIGHTING);
-		draw_normals();
-		glEnable(GL_LIGHTING);
-	}
 
 	glFlush();
 }
 
+// keyboard callback
 void keyboard(unsigned char key, int x, int y)
 {
 	if (key == 'x')
@@ -324,8 +277,6 @@ void keyboard(unsigned char key, int x, int y)
 		drawMesh = !drawMesh;
 	else if (key == 'p' || key == 'P')
 		drawPic = !drawPic;
-	else if (key == 'n' || key == 'N')
-		drawNormals = !drawNormals;
 	else if (key == 'l' || key == 'L') {
 		lighting = !lighting;
 		lighting ? rotate_inc++ : rotate_inc--;
@@ -334,20 +285,24 @@ void keyboard(unsigned char key, int x, int y)
 		scale_amt += 0.01;
 	else if (key == '-') 
 		scale_amt -= 0.01;
+
 	glutPostRedisplay();
 }
 
+// initialize program state
 void init()
 {
+	// initialize openGL
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(MIN_X_SCREEN, MAX_X_SCREEN, MIN_Y_SCREEN, MAX_Y_SCREEN, MIN_Z_SCREEN, MAX_Z_SCREEN);
 	glEnable(GL_DEPTH_TEST);
 
+	// initialize lighting and build mesh
 	glShadeModel(GL_SMOOTH);
 	init_light(GL_LIGHT1, 0, 0, 300, 1, 1, 1);
-	initMesh();
+	init_mesh();
 }
 
 int main(int argc, char* argv[])
